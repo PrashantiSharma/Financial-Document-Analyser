@@ -22,8 +22,9 @@ class FinancialDocumentTool:
     """
 
     # Default location of the PDF to read.  This value is overwritten at runtime
-    # when the API receives an uploaded file.
-    default_path: str = "data/sample.pdf"
+    # when the API receives an uploaded file.  Use the bundled Tesla report so
+    # ``run_crew`` works out of the box.
+    default_path: str = "data/TSLA-Q2-2025-Update.pdf"
 
     @staticmethod
     async def read_data_tool(path: Optional[str] = None) -> str:
