@@ -1,38 +1,64 @@
-# Financial Document Analyzer - Debug Assignment
+# Financial Document Analyzer
 
-## Project Overview
-A comprehensive financial document analysis system that processes corporate reports, financial statements, and investment documents using AI-powered analysis agents.
+A lightweight FastAPI application that inspects PDF reports with a small
+deterministic language model.  The service exposes a simple API for uploading
+financial documents and receiving high‑level analysis.
 
-## Getting Started
+## Bugs and Fixes
 
-### Install Required Libraries
-```sh
-pip install -r requirement.txt
+| Original issue | Resolution |
+| --- | --- |
+| Agents used unsafe, vague prompts and referenced an undefined LLM | Replaced with clear professional prompts and a local `DummyLLM` stub for deterministic behaviour |
+| PDF tool relied on an unavailable library and static paths | Rebuilt using `pypdf`, added path validation and hooked the API upload path into the workflow |
+| API entry point left temporary files behind and produced weak error messages | Added robust file handling, error propagation and cleanup |
+
+## Setup
+
+1. **Install dependencies**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Run the test suite**
+
+   ```bash
+   pytest -q
+   ```
+
+## Usage
+
+Start the API with Uvicorn:
+
+```bash
+uvicorn main:app --reload
 ```
 
-### Sample Document
-The system analyzes financial documents like Tesla's Q2 2025 financial update.
+### Endpoints
 
-**To add Tesla's financial document:**
-1. Download the Tesla Q2 2025 update from: https://www.tesla.com/sites/default/files/downloads/TSLA-Q2-2025-Update.pdf
-2. Save it as `data/sample.pdf` in the project directory
-3. Or upload any financial PDF through the API endpoint
+| Method & Path | Description |
+| --- | --- |
+| `GET /` | Health check returning a status message |
+| `POST /analyze` | Upload a PDF (`file`) and optional `query` to receive an analysis |
 
-**Note:** Current `data/sample.pdf` is a placeholder - replace with actual Tesla financial document for proper testing.
+Example using `curl`:
 
-# You're All Not Set!
-🐛 **Debug Mode Activated!** The project has bugs waiting to be squashed - your mission is to fix them and bring it to life.
+```bash
+curl -X POST -F "file=@data/TSLA-Q2-2025-Update.pdf" \
+     -F "query=Summarise key risks" \
+     http://localhost:8000/analyze
+```
 
-## Debugging Instructions
+## Project Structure
 
-1. **Identify the Bug**: Carefully read the code in each file and understand the expected behavior. There is a bug in each line of code. So be careful.
-2. **Fix the Bug**: Implement the necessary changes to fix the bug.
-3. **Test the Fix**: Run the project and verify that the bug is resolved.
-4. **Repeat**: Continue this process until all bugs are fixed.
+* `agents.py` – defines analysis agents powered by a deterministic LLM stub
+* `tools.py` – PDF reading and web search helpers
+* `task.py` – CrewAI tasks that orchestrate agent behaviour
+* `main.py` – FastAPI entry point and crew execution wiring
 
-## Expected Features
-- Upload financial documents (PDF format)
-- AI-powered financial analysis
-- Investment recommendations
-- Risk assessment
-- Market insights
+## Development Notes
+
+The repository includes a sample Tesla earnings report at
+`data/TSLA-Q2-2025-Update.pdf`.  When the API receives a document upload it
+temporarily stores the file and removes it after processing.
+
