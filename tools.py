@@ -1,60 +1,69 @@
-## Importing libraries and files
-import os
-from dotenv import load_dotenv
-load_dotenv()
+"""Utility tools used by the financial analysis application."""
 
-from crewai_tools import tools
+import os
+from typing import Optional
+
+from dotenv import load_dotenv
+from pypdf import PdfReader
 from crewai_tools.tools.serper_dev_tool import SerperDevTool
 
-## Creating search tool
+load_dotenv()
+
+# Expose a simple web search tool used by some agents
 search_tool = SerperDevTool()
 
-## Creating custom pdf reader tool
-class FinancialDocumentTool():
-    async def read_data_tool(path='data/sample.pdf'):
-        """Tool to read data from a pdf file from a path
+
+class FinancialDocumentTool:
+    """Utility class for reading financial documents.
+
+    The class exposes ``read_data_tool`` which can be registered as a CrewAI
+    tool.  The path of the document to analyse can be set via ``default_path``;
+    ``main.run_crew`` updates this before the crew is executed.
+    """
+
+    # Default location of the PDF to read.  This value is overwritten at runtime
+    # when the API receives an uploaded file.
+    default_path: str = "data/sample.pdf"
+
+    @staticmethod
+    async def read_data_tool(path: Optional[str] = None) -> str:
+        """Read and return the textual contents of a PDF file.
 
         Args:
-            path (str, optional): Path of the pdf file. Defaults to 'data/sample.pdf'.
+            path: Optional path to the PDF file.  If not provided the value from
+                :attr:`default_path` is used.
 
         Returns:
-            str: Full Financial Document file
+            The extracted text from the PDF.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
         """
-        
-        docs = Pdf(file_path=path).load()
 
-        full_report = ""
-        for data in docs:
-            # Clean and format the financial document data
-            content = data.page_content
-            
-            # Remove extra whitespaces and format properly
-            while "\n\n" in content:
-                content = content.replace("\n\n", "\n")
-                
-            full_report += content + "\n"
-            
-        return full_report
+        path = path or FinancialDocumentTool.default_path
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"PDF file not found: {path}")
 
-## Creating Investment Analysis Tool
+        reader = PdfReader(path)
+        pages_text: list[str] = []
+        for page in reader.pages:
+            text = page.extract_text() or ""
+            pages_text.append(text.strip())
+        return "\n".join(pages_text).strip()
+
+
 class InvestmentTool:
-    async def analyze_investment_tool(financial_document_data):
-        # Process and analyze the financial document data
-        processed_data = financial_document_data
-        
-        # Clean up the data format
-        i = 0
-        while i < len(processed_data):
-            if processed_data[i:i+2] == "  ":  # Remove double spaces
-                processed_data = processed_data[:i] + processed_data[i+1:]
-            else:
-                i += 1
-                
-        # TODO: Implement investment analysis logic here
-        return "Investment analysis functionality to be implemented"
+    """Placeholder for future investment analysis capabilities."""
 
-## Creating Risk Assessment Tool
+    async def analyze_investment_tool(self, financial_document_data: str) -> str:
+        processed_data = " ".join(financial_document_data.split())
+        # TODO: Implement investment analysis logic
+        return processed_data
+
+
 class RiskTool:
-    async def create_risk_assessment_tool(financial_document_data):        
-        # TODO: Implement risk assessment logic here
-        return "Risk assessment functionality to be implemented"
+    """Placeholder for future risk assessment capabilities."""
+
+    async def create_risk_assessment_tool(self, financial_document_data: str) -> str:
+        # TODO: Implement risk assessment logic
+        return financial_document_data

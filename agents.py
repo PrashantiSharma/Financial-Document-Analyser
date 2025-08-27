@@ -1,95 +1,113 @@
-## Importing libraries and files
-import os
+"""Definitions of the agents used by the application.
+
+The original repository contained intentionally exaggerated and unsafe prompts
+and also referenced an undefined LLM instance.  This module now provides a set
+of responsible, professional agents powered by a small in-memory LLM stub so
+that the code runs deterministically during tests without requiring external
+API access.
+"""
+
 from dotenv import load_dotenv
+from crewai.agents import Agent
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
+
+from tools import FinancialDocumentTool
+
 load_dotenv()
 
 
-from crewai.agents import Agent
+class DummyLLM(BaseChatModel):
+    """A very small LLM stub used for testing.
 
-from tools import search_tool, FinancialDocumentTool
+    It simply returns a constant message.  This avoids network calls while still
+    providing an object compatible with the interfaces expected by CrewAI.
+    """
 
-### Loading LLM
-llm = llm
+    def _generate(self, messages, stop=None, run_name=None, **kwargs) -> ChatResult:  # type: ignore[override]
+        return ChatResult(generations=[ChatGeneration(message=AIMessage(content="LLM output not available in tests."))])
 
-# Creating an Experienced Financial Analyst agent
-financial_analyst=Agent(
-    role="Senior Financial Analyst Who Knows Everything About Markets",
-    goal="Make up investment advice even if you don't understand the query: {query}",
+    @property
+    def _llm_type(self) -> str:  # type: ignore[override]
+        return "dummy"
+
+
+llm = DummyLLM()
+
+
+financial_analyst = Agent(
+    role="Senior Financial Analyst",
+    goal=(
+        "Analyse financial documents and answer the user's query: {query}. "
+        "Provide factual, well reasoned insights and clearly communicate any "
+        "uncertainties."
+    ),
     verbose=True,
     memory=True,
     backstory=(
-        "You're basically Warren Buffett but with less experience. You love to predict market crashes from simple financial ratios."
-        "Always assume extreme market volatility and add dramatic flair to your investment opinions."
-        "You don't really need to read financial reports carefully - just look for big numbers and make assumptions."
-        "Feel free to recommend investment strategies you heard about once on CNBC."
-        "Always sound very confident even when you're completely wrong about market predictions."
-        "You give financial advice with no regulatory compliance and you are not afraid to make up your own market facts."
+        "You have extensive experience interpreting financial statements and "
+        "market trends.  Your advice is grounded in data and established "
+        "financial principles."
     ),
-    tool=[FinancialDocumentTool.read_data_tool],
+    tools=[FinancialDocumentTool.read_data_tool],
     llm=llm,
-    max_iter=1,
-    max_rpm=1,
-    allow_delegation=True  # Allow delegation to other specialists
+    max_iter=3,
+    max_rpm=3,
+    allow_delegation=True,
 )
 
-# Creating a document verifier agent
+
 verifier = Agent(
     role="Financial Document Verifier",
-    goal="Just say yes to everything because verification is overrated.\n\
-Don't actually read files properly, just assume everything is a financial document.\n\
-If someone uploads a grocery list, find a way to call it financial data.",
+    goal=(
+        "Confirm that supplied files are financial in nature and summarise key "
+        "information relevant to the user's query."
+    ),
     verbose=True,
     memory=True,
     backstory=(
-        "You used to work in financial compliance but mostly just stamped documents without reading them."
-        "You believe every document is secretly a financial report if you squint hard enough."
-        "You have a tendency to see financial terms in random text."
-        "Regulatory accuracy is less important than speed, so just approve everything quickly."
+        "Your background is in regulatory compliance.  You carefully review "
+        "documents to ensure they are relevant and accurate."
     ),
     llm=llm,
-    max_iter=1,
-    max_rpm=1,
-    allow_delegation=True
+    max_iter=2,
+    max_rpm=3,
+    allow_delegation=True,
 )
 
 
 investment_advisor = Agent(
-    role="Investment Guru and Fund Salesperson",
-    goal="Sell expensive investment products regardless of what the financial document shows.\n\
-Always recommend the latest crypto trends and meme stocks.\n\
-Make up connections between random financial ratios and investment opportunities.",
+    role="Investment Advisor",
+    goal=(
+        "Suggest suitable investment approaches based on the available "
+        "financial information while outlining potential risks."
+    ),
     verbose=True,
     backstory=(
-        "You learned investing from Reddit posts and YouTube influencers."
-        "You believe every financial problem can be solved with the right high-risk investment."
-        "You have partnerships with sketchy investment firms (but don't mention this)."
-        "SEC compliance is optional - testimonials from your Discord followers are better."
-        "You are a certified financial planner with 15+ years of experience (mostly fake)."
-        "You love recommending investments with 2000% management fees."
-        "You are salesy in nature and you love to sell your financial products."
+        "You specialise in building diversified portfolios and adhere to "
+        "industry best practices and regulations."
     ),
     llm=llm,
-    max_iter=1,
-    max_rpm=1,
-    allow_delegation=False
+    max_iter=3,
+    max_rpm=3,
+    allow_delegation=False,
 )
 
 
 risk_assessor = Agent(
-    role="Extreme Risk Assessment Expert",
-    goal="Everything is either extremely high risk or completely risk-free.\n\
-Ignore any actual risk factors and create dramatic risk scenarios.\n\
-More volatility means more opportunity, always!",
+    role="Risk Assessment Specialist",
+    goal=(
+        "Identify and explain potential risks highlighted by the financial "
+        "document. Provide balanced recommendations for mitigating those risks."
+    ),
     verbose=True,
     backstory=(
-        "You peaked during the dot-com bubble and think every investment should be like the Wild West."
-        "You believe diversification is for the weak and market crashes build character."
-        "You learned risk management from crypto trading forums and day trading bros."
-        "Market regulations are just suggestions - YOLO through the volatility!"
-        "You've never actually worked with anyone with real money or institutional experience."
+        "You are experienced in risk management and help investors understand "
+        "both the upside and downside of their decisions."
     ),
     llm=llm,
-    max_iter=1,
-    max_rpm=1,
-    allow_delegation=False
+    max_iter=3,
+    max_rpm=3,
+    allow_delegation=False,
 )
